@@ -211,6 +211,35 @@ footer a:hover { color: var(--teal); }
 .media { margin: 40px 0 0; padding-top: 24px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); max-width: 760px; }
 @media (max-width: 760px) { .rel-meta { flex-direction: column; gap: 4px; } }
 
+/* ---------- annual report ---------- */
+.ar-charts { display: flex; flex-direction: column; gap: 28px; max-width: 900px; }
+.ar-chart { margin: 0; }
+.ar-chart figcaption { display: flex; align-items: baseline; gap: 12px; margin: 0 0 8px; }
+.ar-chart figcaption b { font-family: var(--head); font-weight: 400; font-size: 17px; }
+.ar-chart figcaption span { font-size: 12px; color: var(--muted); }
+.ar-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ar-chart svg:focus-visible { outline: 2px solid var(--teal); outline-offset: 4px; border-radius: 2px; }
+.ar-grid { stroke: var(--line); stroke-width: 1; }
+.ar-tick { fill: var(--muted); font-size: 11px; font-family: var(--sans); }
+.ar-line { fill: none; stroke: var(--teal); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ar-end { fill: var(--teal); stroke: var(--white); stroke-width: 2; }
+.ar-endlabel { fill: var(--ink); font-size: 13px; font-weight: 500; font-family: var(--sans); }
+.ar-cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.ar-dot { fill: var(--teal); stroke: var(--white); stroke-width: 2; }
+.ar-tip { position: absolute; z-index: 30; pointer-events: none; background: var(--white); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 12px 32px rgba(28,38,41,.14); padding: 10px 12px; font-size: 12px; min-width: 200px; }
+.ar-tip-year { font-size: 11px; letter-spacing: .2em; color: var(--muted); margin-bottom: 6px; }
+.ar-tip-row { display: grid; grid-template-columns: 14px auto 1fr; align-items: center; gap: 8px; line-height: 1.7; }
+.ar-tip-row i { width: 14px; height: 2px; background: var(--teal); border-radius: 1px; }
+.ar-tip-row b { font-weight: 500; font-size: 13px; color: var(--ink); }
+.ar-tip-row span { color: var(--muted); }
+.ar-table { margin: 28px 0 0; max-width: 900px; }
+.ar-table summary { cursor: pointer; font-size: 13px; color: var(--teal); }
+.ar-table table { border-collapse: collapse; margin-top: 12px; font-size: 14px; width: 100%; max-width: 520px; }
+.ar-table caption { text-align: left; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.ar-table th, .ar-table td { text-align: right; padding: 6px 12px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.ar-table th:first-child, .ar-table td:first-child { text-align: left; padding-left: 0; }
+.ar-table th { font-weight: 500; font-size: 12px; color: var(--muted); }
+
 /* ---------- status ---------- */
 .all-ok { display: flex; align-items: center; gap: 18px; }
 .all-ok .ir-title { margin: 0; }

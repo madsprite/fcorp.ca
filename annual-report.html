@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F Corp · Annual Report 2026</title>
+<meta name="description" content="F Corp Annual Report 2026. A year of continuity.">
+<meta name="theme-color" content="#f3f5f4">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Inter+Tight:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<!--
+  Investor Relations, internal note:
+  Keep the two charts stacked and aligned by year. Readers draw the conclusion themselves;
+  we never state it. Do not put them on one axis. Legal says that would be a claim.
+-->
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mark" viewBox="28 26 48 48">
+    <rect x="34" y="26" width="10" height="48"/>
+    <rect x="48" y="26" width="22" height="10"/>
+    <rect x="48" y="45" width="15" height="10"/>
+  </symbol>
+</svg>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="./" aria-label="F Corp home">
+      <svg aria-hidden="true"><use href="#mark"/></svg>
+      F CORP
+    </a>
+  </div>
+</nav>
+
+<header class="ir-hero">
+  <div class="wrap">
+    <p class="eyebrow">Annual Report 2026</p>
+    <h2 class="ir-title">A year of continuity.</h2>
+    <p class="ir-lede">Customer contentment reached a record 97.8 this year. So did customer commitment. We present them together, as they have always grown.</p>
+  </div>
+</header>
+
+<section class="band" id="highlights">
+  <div class="wrap">
+    <p class="label"><svg class="mk" aria-hidden="true"><use href="#mark"/></svg>Highlights</p>
+    <div class="kpis">
+      <div class="kpi"><span class="v">97.8</span><span class="k">Contentment index</span><span class="n">Up from 81.2 in 2017. Measured, then assigned.</span></div>
+      <div class="kpi"><span class="v">$424 bn</span><span class="k">Commitment under management</span><span class="n">Up 14% this year. Customers call this debt.</span></div>
+      <div class="kpi"><span class="v">10</span><span class="k">Consecutive years of both</span><span class="n">Neither has ever declined. Neither will.</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="together">
+  <div class="wrap">
+    <p class="label"><svg class="mk" aria-hidden="true"><use href="#mark"/></svg>Growing together · 2017 to 2026</p>
+    <h2>The more our customers commit, the more content they become.</h2>
+    <p class="ledger-intro">Two measures, one decade, aligned by year. Hover or tab through either chart to read both values for that year.</p>
+    <div class="ar-charts" id="charts"></div>
+    <details class="ar-table">
+      <summary>View as table</summary>
+      <table>
+        <caption>Contentment index and commitment under management, 2017 to 2026</caption>
+        <thead><tr><th scope="col">Year</th><th scope="col">Contentment index</th><th scope="col">Commitment ($ bn)</th></tr></thead>
+        <tbody id="ar-rows"></tbody>
+      </table>
+    </details>
+    <p class="fig-note">Figures are illustrative, unaudited and not derived from the records of any actual issuer. Contentment is reported on F Corp's own scale of 0 to 100. Correlation is not causation. At F Corp, it is strategy.</p>
+  </div>
+</section>
+
+<section class="band wellness">
+  <svg class="watermark" aria-hidden="true"><use href="#mark"/></svg>
+  <div class="wrap letter">
+    <p class="label"><svg class="mk" aria-hidden="true"><use href="#mark"/></svg>Outlook</p>
+    <p>For the coming year, F Corp expects contentment to continue rising, and commitment to continue rising with it.</p>
+    <p>We do not anticipate either measure to decline. We have arranged for this.</p>
+    <p class="sig">The Founders</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span><svg class="mk" aria-hidden="true"><use href="#mark"/></svg>&copy; <span id="yr"></span> F Corp. Every outcome is a good outcome.</span>
+    <span><a href="press.html">Newsroom</a> &nbsp;·&nbsp; <a href="shareholders.html">For Shareholders</a> &nbsp;·&nbsp; <a href="terms.html">Our Shared Understanding</a> &nbsp;·&nbsp; <a href="status.html">Status</a></span>
+    <span class="fine">This page does not constitute an offer to sell, or a solicitation of an offer to buy, any security, and contains no forecast on which any person may rely. F Corp and the entities, persons and instruments described herein are illustrative constructs and do not reference any actual issuer, employer or natural person. Any resemblance to the company you work for is a coincidence on which F Corp is unable to comment.</span>
+  </div>
+</footer>
+
+<div class="ar-tip" id="ar-tip" role="status" aria-live="polite" hidden></div>
+
+<script>
+(() => {
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  const data = [
+    { year: 2017, contentment: 81.2, commitment: 118 },
+    { year: 2018, contentment: 83.0, commitment: 139 },
+    { year: 2019, contentment: 84.9, commitment: 162 },
+    { year: 2020, contentment: 86.1, commitment: 191 },
+    { year: 2021, contentment: 88.4, commitment: 224 },
+    { year: 2022, contentment: 90.2, commitment: 259 },
+    { year: 2023, contentment: 92.5, commitment: 296 },
+    { year: 2024, contentment: 94.6, commitment: 338 },
+    { year: 2025, contentment: 96.3, commitment: 372 },
+    { year: 2026, contentment: 97.8, commitment: 424 },
+  ];
+  const series = [
+    { key: 'contentment', title: 'Contentment index', unit: 'index, 0 to 100', min: 75, max: 100, step: 5, fmt: v => v.toFixed(1) },
+    { key: 'commitment', title: 'Commitment under management', unit: '$ billions', min: 0, max: 450, step: 150, fmt: v => '$' + v + ' bn' },
+  ];
+
+  // table view: the same numbers without hovering
+  const rows = document.getElementById('ar-rows');
+  for (const d of data) {
+    const tr = document.createElement('tr');
+    for (const v of [d.year, d.contentment.toFixed(1), d.commitment]) {
+      const td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+    }
+    rows.appendChild(tr);
+  }
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (name, attrs, parent) => {
+    const n = document.createElementNS(NS, name);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const host = document.getElementById('charts');
+  const tip = document.getElementById('ar-tip');
+  let charts = [], active = null;
+
+  function render() {
+    host.innerHTML = '';
+    charts = [];
+    const W = Math.max(280, host.clientWidth), H = W < 520 ? 170 : 210;
+    const pad = { l: 44, r: 64, t: 12, b: 26 };
+    const X = i => pad.l + (i / (data.length - 1)) * (W - pad.l - pad.r);
+    for (const s of series) {
+      const fig = document.createElement('figure');
+      fig.className = 'ar-chart';
+      const cap = document.createElement('figcaption');
+      const b = document.createElement('b'); b.textContent = s.title;
+      const u = document.createElement('span'); u.textContent = s.unit;
+      cap.append(b, u);
+      fig.appendChild(cap);
+      const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', tabindex: '0',
+        'aria-label': `${s.title}, ${data[0].year} to ${data.at(-1).year}: from ${s.fmt(data[0][s.key])} to ${s.fmt(data.at(-1)[s.key])}. Use left and right arrow keys to read each year.` });
+      const Y = v => pad.t + (1 - (v - s.min) / (s.max - s.min)) * (H - pad.t - pad.b);
+      // recessive grid + y ticks
+      for (let v = s.min; v <= s.max; v += s.step) {
+        el('line', { x1: pad.l, x2: W - pad.r, y1: Y(v), y2: Y(v), class: 'ar-grid' }, svg);
+        const t = el('text', { x: pad.l - 8, y: Y(v) + 4, class: 'ar-tick', 'text-anchor': 'end' }, svg);
+        t.textContent = s.key === 'commitment' ? (v ? v : '0') : v;
+      }
+      // x ticks every other year on narrow screens
+      data.forEach((d, i) => {
+        if (W < 520 && i % 3 !== 0 && i !== data.length - 1) return;
+        const t = el('text', { x: X(i), y: H - 6, class: 'ar-tick', 'text-anchor': 'middle' }, svg);
+        t.textContent = d.year;
+      });
+      // the line
+      el('path', { d: data.map((d, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)} ${Y(d[s.key]).toFixed(1)}`).join(' '), class: 'ar-line' }, svg);
+      // direct label on the last point only
+      const last = data.length - 1;
+      el('circle', { cx: X(last), cy: Y(data[last][s.key]), r: 4, class: 'ar-end' }, svg);
+      const lab = el('text', { x: X(last) + 10, y: Y(data[last][s.key]) + 4, class: 'ar-endlabel' }, svg);
+      lab.textContent = s.fmt(data[last][s.key]);
+      // hover layer: crosshair + focus dot
+      const cross = el('line', { y1: pad.t, y2: H - pad.b, class: 'ar-cross', visibility: 'hidden' }, svg);
+      const dot = el('circle', { r: 5, class: 'ar-dot', visibility: 'hidden' }, svg);
+      fig.appendChild(svg);
+      host.appendChild(fig);
+      charts.push({ svg, cross, dot, X, Y, s, pad, W });
+    }
+    if (active !== null) show(active, null);
+  }
+
+  // one crosshair, both charts: the same year is highlighted in each
+  function show(i, anchor) {
+    active = i;
+    const d = data[i];
+    for (const c of charts) {
+      const x = c.X(i), y = c.Y(d[c.s.key]);
+      c.cross.setAttribute('x1', x); c.cross.setAttribute('x2', x); c.cross.setAttribute('visibility', 'visible');
+      c.dot.setAttribute('cx', x); c.dot.setAttribute('cy', y); c.dot.setAttribute('visibility', 'visible');
+    }
+    tip.textContent = '';
+    const yr = document.createElement('div'); yr.className = 'ar-tip-year'; yr.textContent = d.year;
+    tip.appendChild(yr);
+    for (const s of series) {
+      const row = document.createElement('div'); row.className = 'ar-tip-row';
+      const key = document.createElement('i');
+      const v = document.createElement('b'); v.textContent = s.fmt(d[s.key]);
+      const n = document.createElement('span'); n.textContent = s.title;
+      row.append(key, v, n); tip.appendChild(row);
+    }
+    if (anchor) {
+      tip.hidden = false;
+      const r = anchor.svg.getBoundingClientRect();
+      const x = r.left + anchor.X(i) * (r.width / anchor.W);
+      const tw = tip.offsetWidth;
+      tip.style.left = Math.min(window.innerWidth - tw - 12, Math.max(12, x - tw / 2)) + 'px';
+      tip.style.top = (r.top + window.scrollY - tip.offsetHeight - 10) + 'px';
+    }
+  }
+  function hide() {
+    active = null; tip.hidden = true;
+    for (const c of charts) { c.cross.setAttribute('visibility', 'hidden'); c.dot.setAttribute('visibility', 'hidden'); }
+  }
+  function nearest(c, clientX) {
+    const r = c.svg.getBoundingClientRect();
+    const x = (clientX - r.left) * (c.W / r.width);
+    const span = (c.W - c.pad.l - c.pad.r) / (data.length - 1);
+    return Math.max(0, Math.min(data.length - 1, Math.round((x - c.pad.l) / span)));
+  }
+
+  host.addEventListener('pointermove', e => {
+    const c = charts.find(c => c.svg.contains(e.target));
+    if (c) show(nearest(c, e.clientX), c);
+  });
+  host.addEventListener('pointerleave', hide);
+  host.addEventListener('focusin', e => { const c = charts.find(c => c.svg === e.target); if (c) show(active ?? data.length - 1, c); });
+  host.addEventListener('focusout', hide);
+  host.addEventListener('keydown', e => {
+    const c = charts.find(c => c.svg === e.target);
+    if (!c || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    let i = active ?? data.length - 1;
+    i = e.key === 'Home' ? 0 : e.key === 'End' ? data.length - 1 : Math.max(0, Math.min(data.length - 1, i + (e.key === 'ArrowRight' ? 1 : -1)));
+    show(i, c);
+  });
+
+  render();
+  let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(render, 120); });
+})();
+</script>
+<script src="assistant/chat.js" defer></script>
+<script src="notice.js" defer></script>
+</body>
+</html>
