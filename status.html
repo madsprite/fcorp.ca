@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F Corp · System Status</title>
+<meta name="description" content="F Corp system status. All systems nominal.">
+<meta name="theme-color" content="#f3f5f4">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Inter+Tight:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<!--
+  Reliability, internal note:
+  The status label is hard-coded to Operational by design. The percentages are informational.
+-->
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mark" viewBox="28 26 48 48">
+    <rect x="34" y="26" width="10" height="48"/>
+    <rect x="48" y="26" width="22" height="10"/>
+    <rect x="48" y="45" width="15" height="10"/>
+  </symbol>
+</svg>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="./" aria-label="F Corp home">
+      <svg aria-hidden="true"><use href="#mark"/></svg>
+      F CORP
+    </a>
+  </div>
+</nav>
+
+<header class="ir-hero">
+  <div class="wrap">
+    <p class="eyebrow">System Status</p>
+    <div class="all-ok"><span class="dot" aria-hidden="true"></span><h2 class="ir-title">All systems nominal.</h2></div>
+    <p class="ir-lede">F Corp services are operating as intended. As they always have been. <span class="updated">Last checked: <time id="checked">just now</time>.</span></p>
+  </div>
+</header>
+
+<section class="band">
+  <div class="wrap">
+    <p class="label"><svg class="mk" aria-hidden="true"><use href="#mark"/></svg>Services · last 90 days</p>
+    <ul class="services" id="services"></ul>
+    <p class="fig-note">Uptime figures are illustrative and do not describe the systems of any actual issuer or employer. Operational status is not affected by uptime.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span><svg class="mk" aria-hidden="true"><use href="#mark"/></svg>&copy; <span id="yr"></span> F Corp. Every outcome is a good outcome.</span>
+    <span><a href="press.html">Newsroom</a> &nbsp;·&nbsp; <a href="shareholders.html">For Shareholders</a> &nbsp;·&nbsp; <a href="terms.html">Our Shared Understanding</a> &nbsp;·&nbsp; <a href="status.html">Status</a></span>
+    <span class="fine">F Corp and the entities, persons and instruments described herein are illustrative constructs and do not reference any actual issuer, employer or natural person, living or dissolved. Any resemblance to the company you work for is a coincidence on which F Corp is unable to comment.</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  document.getElementById('checked').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  // Weeks since the status page went up. Some figures drift by this; none of it is stored.
+  const weeks = Math.max(0, Math.floor((Date.now() - Date.parse('2026-11-11')) / (7 * 864e5)));
+  const services = [
+    { name: 'Customer Contentment', note: 'Measured, then assigned.', uptime: 99.99, drift: 0 },
+    { name: 'Billing', note: 'Payments are processed promptly.', uptime: 100, drift: 0, perfect: true },
+    { name: 'Refunds', note: 'Requests are received.', uptime: 97.10, drift: 0.04, gaps: [12, 31, 47, 63, 80] },
+    { name: 'Human Resources', note: 'Resources are performing as expected.', uptime: 99.99, drift: 0 },
+    { name: 'Ambient Compliance', note: 'In effect.', uptime: 100, drift: 0, perfect: true },
+    { name: 'Customer Trust', note: 'Within tolerance.', uptime: 99.20, drift: 0.07, gaps: [5, 22, 38, 51, 66, 77, 88] },
+    { name: 'F Corp Assist', note: 'Runs on your device, at your expense.', uptime: 99.90, drift: 0, gaps: [70] },
+    { name: 'Your Account', note: 'Your access has been noted.', uptime: 99.95, drift: 0, gaps: [44] },
+  ];
+
+  const list = document.getElementById('services');
+  for (const s of services) {
+    const up = Math.max(80, s.uptime - s.drift * weeks).toFixed(2);
+    const li = document.createElement('li');
+    li.className = 'svc';
+    const bars = Array.from({ length: 90 }, (_, i) => {
+      const off = (s.gaps || []).includes(i) || (!s.perfect && s.drift && i >= 90 - Math.min(weeks, 30) && i % 3 === 0);
+      return `<i class="${off ? 'off' : ''}" title="${off ? 'Scheduled gratitude' : 'Operational'}"></i>`;
+    }).join('');
+    li.innerHTML = `
+      <div class="svc-head"><span class="svc-name"></span><span class="svc-state">Operational</span></div>
+      <div class="svc-bars" aria-hidden="true">${bars}</div>
+      <div class="svc-foot"><span class="svc-note"></span><span>${up}% uptime</span></div>`;
+    li.querySelector('.svc-name').textContent = s.name;
+    li.querySelector('.svc-note').textContent = s.note;
+    list.appendChild(li);
+  }
+})();
+</script>
+<script src="assistant/chat.js" defer></script>
+<script src="notice.js" defer></script>
+</body>
+</html>
