@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F Corp · Newsroom</title>
+<meta name="description" content="News from F Corp. Every announcement is good news.">
+<meta name="theme-color" content="#f3f5f4">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Inter+Tight:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<!--
+  Communications, internal note:
+  Reminder: there is no such thing as bad news, only news we have not finished writing.
+  Please route all "layoff" drafts through the Next Chapter template before publishing.
+-->
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mark" viewBox="28 26 48 48">
+    <rect x="34" y="26" width="10" height="48"/>
+    <rect x="48" y="26" width="22" height="10"/>
+    <rect x="48" y="45" width="15" height="10"/>
+  </symbol>
+</svg>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="./" aria-label="F Corp home">
+      <svg aria-hidden="true"><use href="#mark"/></svg>
+      F CORP
+    </a>
+  </div>
+</nav>
+
+<header class="ir-hero">
+  <div class="wrap">
+    <p class="eyebrow">Newsroom</p>
+    <h2 class="ir-title">Good news, as always.</h2>
+    <p class="ir-lede">The latest announcements from F Corp and its divisions. Every release is reviewed by Customer Contentment before publication, so that it can only be received well.</p>
+  </div>
+</header>
+
+<section class="band">
+  <div class="wrap">
+    <ol class="releases">
+      <li class="release" id="assist">
+        <p class="rel-meta"><span>Customer Contentment</span><time datetime="2026-11-04">November 4, 2026</time></p>
+        <h3>F Corp Assist now welcomes every customer conversation</h3>
+        <p><b>EVERYWHERE</b> &mdash; F Corp today announced that F Corp Assist, its Contentment Associate, now greets every customer who reaches out. Assist runs entirely on the customer's own device, which allows F Corp to offer support at no cost to F Corp.</p>
+        <p>"Customers will notice no difference," said a spokesperson for Customer Contentment. "Many already have not." Conversations that require a decision are transferred to a specialist, who will be in touch when it is convenient.</p>
+      </li>
+      <li class="release" id="presence">
+        <p class="rel-meta"><span>Office of Wellbeing</span><time datetime="2026-10-21">October 21, 2026</time></p>
+        <h3>Introducing F Corp Presence: a return to togetherness</h3>
+        <p><b>EVERYWHERE</b> &mdash; Beginning next quarter, colleagues will be warmly welcomed back to the office five days a week, so that no one need ever feel apart from the work. Colleagues may continue to work from home in the evenings.</p>
+        <p>Attendance will be gently recorded at each entrance and used solely to celebrate presence. Colleagues who prefer not to be celebrated are invited to discuss their preferences with Legacy Outcomes.</p>
+      </li>
+      <li class="release" id="plans">
+        <p class="rel-meta"><span>F Corp Capital</span><time datetime="2026-10-02">October 2, 2026</time></p>
+        <h3>Your plan now includes more</h3>
+        <p><b>EVERYWHERE</b> &mdash; F Corp is pleased to announce that every plan has been value-aligned to better reflect everything we already do for you. The new pricing takes effect automatically, so there is nothing you need to do, and nothing you can.</p>
+        <p>Customers who wish to review their new plan may begin the Farewell Journey at any time, as described in <a href="terms.html">our shared understanding</a>.</p>
+      </li>
+      <li class="release" id="chapter">
+        <p class="rel-meta"><span>Legacy Outcomes</span><time datetime="2026-09-15">September 15, 2026</time></p>
+        <h3>F Corp welcomes 40,000 colleagues to their next chapter</h3>
+        <p><b>EVERYWHERE</b> &mdash; As part of its continuing journey toward Order, F Corp today released 40,000 roles into opportunity. Each colleague will receive a framed certificate of gratitude and thirty days of continued access to the F Corp Wellness portal.</p>
+        <p>"We have never been more grateful," said The Founders. Customers served by these colleagues have been reassured that nothing will change, and nothing will.</p>
+      </li>
+      <li class="release" id="contentment">
+        <p class="rel-meta"><span>Investor Relations</span><time datetime="2026-08-28">August 28, 2026</time></p>
+        <h3>F Corp reports record contentment for the ninth consecutive quarter</h3>
+        <p><b>EVERYWHERE</b> &mdash; The F Corp Contentment Index reached 97.8 this quarter, its highest reading since it was introduced. Contentment is measured, then assigned, using a methodology refined over many years to produce this result.</p>
+        <p>Further detail is available to <a href="shareholders.html">our shareholders</a>.</p>
+      </li>
+    </ol>
+    <p class="media">Media inquiries: there is no need to inquire. Everything you need to know has been released.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span><svg class="mk" aria-hidden="true"><use href="#mark"/></svg>&copy; <span id="yr"></span> F Corp. Every outcome is a good outcome.</span>
+    <span><a href="press.html">Newsroom</a> &nbsp;·&nbsp; <a href="shareholders.html">For Shareholders</a> &nbsp;·&nbsp; <a href="terms.html">Our Shared Understanding</a></span>
+    <span class="fine">Statements herein are illustrative and do not describe any actual issuer, employer, event or natural person. Nothing on this page constitutes an offer, a forecast or financial information. F Corp and the entities, persons and instruments described herein are illustrative constructs. Any resemblance to the company you work for is a coincidence on which F Corp is unable to comment.</span>
+  </div>
+</footer>
+
+<script>document.getElementById('yr').textContent = new Date().getFullYear();</script>
+<script src="assistant/chat.js" defer></script>
+<script src="notice.js" defer></script>
+</body>
+</html>
