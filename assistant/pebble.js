@@ -197,7 +197,8 @@
     const l = Float32Array.from(logits);
     for (const t of recent) l[t] = l[t] > 0 ? l[t] / repetitionPenalty : l[t] * repetitionPenalty;
     if (temperature <= 0) { let b = 0; for (let i = 1; i < l.length; i++) if (l[i] > l[b]) b = i; return b; }
-    const idx = Array.from(l.keys()).sort((a, b) => l[b] - l[a]).slice(0, topK);
+    const idx = Array.from(l.keys()).filter(i => l[i] > -Infinity).sort((a, b) => l[b] - l[a]).slice(0, topK);
+    if (!idx.length) return 0;
     const mx = l[idx[0]];
     let probs = idx.map(i => Math.exp((l[i] - mx) / temperature));
     let s = probs.reduce((a, b) => a + b, 0); probs = probs.map(p => p / s);
@@ -266,35 +267,120 @@
     }
   }
 
+  // ---------- lexicon: dictionary-guided decoding ----------
+  // A token may only be chosen if every word it touches stays on the way to a real
+  // word, and a word may only end once it is complete. The model still ranks tokens;
+  // the lexicon only removes the ones that would build non-words.
+  class Lexicon {
+    constructor(words, tok) {
+      this.words = new Set(); this.prefixes = new Set();
+      for (const w of words) this.add(w);
+      // decoded text of every single token; null when it is not valid text on its own
+      const strict = new TextDecoder('utf-8', { fatal: true });
+      this.text = tok.inv.map((s, id) => {
+        if (id === 0 || s === undefined) return null;
+        try { return strict.decode(new Uint8Array(Array.from(s, ch => tok.u2b[ch]))); } catch (e) { return null; }
+      });
+    }
+    add(w) {
+      w = w.toLowerCase();
+      if (!w) return;
+      this.words.add(w);
+      for (let i = 1; i <= w.length; i++) this.prefixes.add(w.slice(0, i));
+    }
+    // Returns the new state after appending text, or null if the text would build a
+    // non-word, use a disallowed character, or produce messy punctuation.
+    // state = { w: partial word, last: last character emitted }
+    advance(state, text, extra) {
+      let w = state.w, last = state.last;
+      for (const ch of text) {
+        if (/[\p{L}']/u.test(ch)) {
+          if (/[,.?!]/.test(last)) return null;          // a space must follow punctuation
+          if (w && ch !== ch.toLowerCase()) return null; // no capitals inside a word
+          if (ch === "'" && !w) return null;             // apostrophe only inside a word
+          w += ch.toLowerCase();
+          if (!this.prefixes.has(w) && !(extra && extra.prefixes.has(w))) return null;
+        } else if (ch === ' ') {
+          if (w && !this.complete(w, extra)) return null;
+          if (last === ' ') return null;                 // no double spaces
+          w = '';
+        } else if (/[,.?!]/.test(ch)) {
+          if (w && !this.complete(w, extra)) return null;
+          if (!w && !/[\p{L}]/u.test(last)) return null; // punctuation only right after a word
+          w = '';
+        } else {
+          return null;                                   // digits, hyphens, symbols, newlines
+        }
+        last = ch;
+      }
+      return { w, last };
+    }
+    complete(w, extra) { return this.words.has(w) || !!(extra && extra.words.has(w)); }
+  }
+  function extraWords(text) {
+    const e = { words: new Set(), prefixes: new Set() };
+    for (const m of text.toLowerCase().matchAll(/[\p{L}']+/gu)) {
+      const w = m[0]; e.words.add(w);
+      for (let i = 1; i <= w.length; i++) e.prefixes.add(w.slice(0, i));
+    }
+    return e;
+  }
+
   // ---------- one short reply ----------
   // The published weights were trained with labels shifted twice: the logits at
   // position i predict token i+2, not i+1 (measured: 4.06 vs 5.93 nats/token).
   // So the token after position n is sampled from the logits computed at n-1.
   // Every reply starts from a fresh state and sees only the latest message.
-  function reply(model, tok, userText, opt, onText) {
-    const o = Object.assign({ maxTokens: 28, maxPromptTokens: 48, temperature: 0.55, topK: 40, topP: 0.9, repetitionPenalty: 1.3 }, opt);
+  function reply(model, tok, userText, opt, onText, lex) {
+    const o = Object.assign({ maxTokens: 28, maxPromptTokens: 48, minWords: 4, temperature: 0.45, topK: 40, topP: 0.9, repetitionPenalty: 1.3 }, opt);
     model.reset();
-    let msg = tok.encode(userText.replace(/\s+/g, ' ').trim());
+    const clean = userText.replace(/\s+/g, ' ').trim();
+    let msg = tok.encode(clean);
     if (msg.length > o.maxPromptTokens) msg = msg.slice(-o.maxPromptTokens);
     const ids = [0, ...tok.encode('user: '), ...msg, ...tok.encode('\nassistant:')];
     let prev = null, cur = null;
     for (const t of ids) { prev = cur; cur = Float32Array.from(model.step(t)); }
+    const extra = null; // the visitor's own words are never added to the vocabulary
     const out = [];
-    let text = '';
+    let text = '', state = { w: '', last: ' ' }, ended = false;
     for (let i = 0; i < o.maxTokens; i++) {
-      const t = sample(prev, out.slice(-24), o);
-      if (t === 0) break;
+      let logits = prev, nextState = null;
+      if (lex) {
+        logits = Float32Array.from(prev);
+        let any = false;
+        for (let id = 0; id < logits.length; id++) {
+          const s = lex.text[id];
+          const ok = id === 0 ? (!state.w || lex.complete(state.w, extra))
+                   : s !== null && lex.advance(state, s, extra) !== null;
+          if (!ok) logits[id] = -Infinity; else any = true;
+        }
+        if (!any) break;
+      }
+      const t = sample(logits, out.slice(-24), o);
+      if (t === 0) { ended = true; break; }
+      if (lex) nextState = lex.advance(state, lex.text[t], extra);
       out.push(t);
       const next = tok.decode(out);
       const cut = next.search(/\n|user:|assistant:/);
-      if (cut >= 0 && next.slice(0, cut).trim()) { text = next.slice(0, cut); break; }
-      if (cut < 0) { text = next; if (onText) onText(text.trim()); }
+      if (cut >= 0) { if (next.slice(0, cut).trim()) { text = next.slice(0, cut); ended = true; break; } }
+      else {
+        text = next; if (nextState) state = nextState; if (onText) onText(text.trim());
+        // one sentence is enough: stop at its end once it has a few words
+        if (/[.!?]\s*$/.test(text) && text.trim().split(/\s+/).length >= o.minWords) { ended = true; break; }
+      }
       prev = cur; cur = Float32Array.from(model.step(t));
     }
-    return text.trim();
+    // ran out of room mid-word: drop the unfinished word
+    if (lex && !ended && state.w && !lex.complete(state.w, extra)) text = text.slice(0, text.length - state.w.length);
+    text = text.trim().replace(/[,\s]+$/, '');
+    if (lex && text) {
+      if (!/[.!?]$/.test(text)) text += '.';
+      text = text.replace(/\bi\b/g, 'I').replace(/^\p{Ll}/u, c => c.toUpperCase());
+    }
+    return text;
   }
 
-  const api = { Pebble, Tokenizer, loadWeights, sample, reply, CTX, EOS: 0 };
+  const api = { Pebble, Tokenizer, Lexicon, loadWeights, sample, reply, CTX, EOS: 0 };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.PebbleLM = api;
 })(typeof self !== 'undefined' ? self : this);

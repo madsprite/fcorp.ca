@@ -13,4 +13,13 @@ Changes made for this site:
 - Decoding samples each token from the logits of the previous position, because the
   published weights predict two tokens ahead (measured: 4.06 nats/token at t+2 versus 5.93 at t+1).
 
+- Replies are dictionary-guided: a token is only sampled if every word it builds is on the
+  way to a word in words.txt, with simple punctuation rules. The model still ranks all tokens.
+
 tokenizer.json is copied unchanged from the model repository.
+
+words.txt is a subset of the ENABLE word list (public domain), keeping common words by
+tokenizer length, with offensive terms removed at build time using the LDNOOBW list
+(CC-BY-4.0, https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words),
+dsojevic/profanity-list (MIT, https://github.com/dsojevic/profanity-list) and a manual list.
+Those blocklists are not distributed with this site.
