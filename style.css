@@ -10,6 +10,7 @@
   --head: "Inter Tight", "Inter", system-ui, sans-serif;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
 body {
   margin: 0; background: var(--paper); color: var(--ink);
@@ -137,6 +138,19 @@ sup a { color: var(--teal); text-decoration: none; padding: 0 1px; }
 footer a { color: var(--muted); text-decoration: none; }
 footer a:hover { color: var(--teal); }
 
+/* ---------- terms ---------- */
+.updated { font-size: 12px; color: var(--muted); letter-spacing: .08em; margin: 20px 0 0; }
+.clauses { list-style: none; counter-reset: clause; max-width: 720px; margin: 0; padding: 0; }
+.clauses li { counter-increment: clause; display: grid; grid-template-columns: 56px 1fr; column-gap: 8px; padding: 28px 0; border-top: 1px solid var(--line); }
+.clauses li::before { content: counter(clause, decimal-leading-zero); grid-row: 1 / span 2; font-family: var(--head); font-size: 13px; letter-spacing: .2em; color: var(--teal); padding-top: 5px; }
+.clauses h3, .clauses p { grid-column: 2; }
+.clauses h3 { font-family: var(--head); font-weight: 400; font-size: 20px; margin: 0 0 8px; }
+.clauses p { margin: 0; color: var(--muted); max-width: 60ch; }
+.clauses a { color: var(--teal); }
+.clauses .plain p { color: var(--ink); }
+.accept { max-width: 720px; border-top: 1px solid var(--line); padding-top: 48px; text-align: center; min-height: 120px; }
+.accept-note { font-family: var(--head); font-size: 20px; margin: 10px 0 0; animation: fadein .8s both; }
+
 /* ---------- reassigned (404) ---------- */
 .gone { min-height: calc(100vh - 69px); min-height: calc(100svh - 69px); display: flex; align-items: center; justify-content: center; text-align: center; padding: 56px 0; }
 .gone svg { width: 72px; height: 72px; fill: var(--ink); margin: 0 auto 36px; display: block; }
@@ -150,6 +164,7 @@ footer a:hover { color: var(--teal); }
   .principles, .depts, .kpis { grid-template-columns: 1fr; }
   .lrow { grid-template-columns: 1fr; gap: 6px; }
   .lhead { display: none; }
+  .clauses li { grid-template-columns: 40px 1fr; }
   .fcycle { min-height: 3.3em; }
   .lrow span:last-child::before { content: "\2192\00a0"; color: var(--teal); }
   .ir-hero { padding: 80px 0 64px; }

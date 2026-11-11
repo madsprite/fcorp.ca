@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F Corp · Our Shared Understanding</title>
+<meta name="description" content="The terms of your relationship with F Corp, written with care.">
+<meta name="theme-color" content="#f3f5f4">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Inter+Tight:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<!--
+  Legal, internal note:
+  Clause 14 was flagged in review as "too clear". Leaving it in. Nobody reaches it.
+-->
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mark" viewBox="28 26 48 48">
+    <rect x="34" y="26" width="10" height="48"/>
+    <rect x="48" y="26" width="22" height="10"/>
+    <rect x="48" y="45" width="15" height="10"/>
+  </symbol>
+</svg>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="./" aria-label="F Corp home">
+      <svg aria-hidden="true"><use href="#mark"/></svg>
+      F CORP
+    </a>
+  </div>
+</nav>
+
+<header class="ir-hero">
+  <div class="wrap">
+    <p class="eyebrow">Terms of Service</p>
+    <h2 class="ir-title">Our shared understanding.</h2>
+    <p class="ir-lede">These terms describe the relationship between you and F Corp. We have written them with care, so that you would not need to read them.</p>
+    <p class="updated">Last updated: continuously.</p>
+  </div>
+</header>
+
+<section class="band">
+  <div class="wrap">
+    <ol class="clauses">
+      <li><h3>Acceptance</h3><p>By reading this sentence, you have accepted this understanding. By not reading it, you have accepted it more efficiently.</p></li>
+      <li><h3>Definitions</h3><p>"You" means you, and anyone you have been. "F Corp" means F Corp, its divisions, and anything F Corp has become. "Friend" has the meaning given in <a href="shareholders.html#n4">note 4 to our shareholders</a>.</p></li>
+      <li><h3>The relationship</h3><p>F Corp agrees to be there for you. You agree to be there.</p></li>
+      <li><h3>Changes to this understanding</h3><p>F Corp may update this understanding at any time. You will be notified of each update by the understanding having been updated.</p></li>
+      <li><h3>Getting to know you</h3><p>F Corp collects information in order to get to know you. We will never sell your information. It is not for sale. It is ours.</p></li>
+      <li><h3>Your content</h3><p>Anything you create while in our care remains yours. You grant F Corp a perpetual, worldwide, royalty-free licence to enjoy it with you, and without you.</p></li>
+      <li><h3>Commitments</h3><p>Balances, plans and subscriptions are commitments. A commitment continues until it is fulfilled. Fulfilment is determined by F Corp, with gratitude.</p></li>
+      <li><h3>Ending the relationship</h3><p>You may end your relationship with F Corp at any time by beginning the Farewell Journey, a twelve-step process designed with your wellbeing in mind. Step twelve is reconsideration.</p></li>
+      <li><h3>Wellbeing</h3><p>F Corp may contact you from time to time to ask how you are. Declining to answer is recorded as an answer.</p></li>
+      <li><h3>Fair use</h3><p>Your use of F Corp must be fair. Fairness is described in clause 3.</p></li>
+      <li><h3>Disagreements</h3><p>Any disagreement will be resolved through a calm conversation between F Corp and F Corp's independent arbitration partner, a division of F Corp.</p></li>
+      <li><h3>Responsibility</h3><p>F Corp accepts responsibility for everything except outcomes. Every outcome is a good outcome.</p></li>
+      <li><h3>Severability</h3><p>If any part of this understanding cannot be enforced, the remaining parts will continue to understand you.</p></li>
+      <li class="plain"><h3>In plain words</h3><p>You are not our customer. You are what we have. Everything above was written so that you would stop reading before here. Thank you for reading this far. It has been noted.</p></li>
+      <li><h3>Entire understanding</h3><p>This is the entire understanding between you and F Corp, apart from the parts that are understood.</p></li>
+    </ol>
+
+    <div class="accept">
+      <button class="btn" id="agree">I understand</button>
+      <p class="accept-note" id="agreed" hidden>Thank you. You always did.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span><svg class="mk" aria-hidden="true"><use href="#mark"/></svg>&copy; <span id="yr"></span> F Corp. Every outcome is a good outcome.</span>
+    <span><a href="shareholders.html">For Shareholders</a> &nbsp;·&nbsp; <a href="terms.html">Our Shared Understanding</a></span>
+    <span class="fine">F Corp is a fictional company and this is not a real agreement. Nothing on fcorp.ca collects, stores or tracks anything about you, including whether you pressed the button.</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  const agree = document.getElementById('agree');
+  agree.addEventListener('click', () => {
+    agree.hidden = true;
+    document.getElementById('agreed').hidden = false;
+  });
+})();
+</script>
+</body>
+</html>
