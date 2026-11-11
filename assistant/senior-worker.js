@@ -16,10 +16,11 @@ async function load(f16) {
 
 async function reply(text, forceTransfer) {
   let r = forceTransfer ? { text: TRANSFER_LINES[0], transfer: true } : guard(text);
-  if (!r) {
+  // one retry when the model copies template text ("Your Company Name"); then a safe line
+  for (let attempt = 0; !r || (r.retry && attempt < 2); attempt++) {
     const out = await engine.chat.completions.create({
       messages: buildMessages(history, text),
-      max_tokens: 60,
+      max_tokens: 40,
       temperature: 0.6,
       top_p: 0.9,
       frequency_penalty: 0.2,
