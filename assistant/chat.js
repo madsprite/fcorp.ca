@@ -88,6 +88,7 @@
         }
         log.scrollTop = log.scrollHeight;
       } else if (m.type === 'error') {
+        console.warn('F Corp associate:', m.message);
         bar.hidden = true; busy = false;
         status.textContent = 'Associate unavailable';
         add('them', 'Your associate is currently unavailable. This has been noted.', 'closing');

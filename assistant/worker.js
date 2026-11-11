@@ -4,21 +4,26 @@ importScripts('pebble.js');
 let model = null, tok = null, lex = null;
 const here = p => new URL(p, self.location).href;
 
+// total = the real (decompressed) size from the manifest. Content-Length can't be used:
+// the host gzips the file, so the header gives the smaller compressed size.
 async function fetchWithProgress(url, total) {
   const res = await fetch(url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  const len = Number(res.headers.get('content-length')) || total;
-  if (!res.body || !len) return res.arrayBuffer();
+  if (!res.body) return res.arrayBuffer();
   const reader = res.body.getReader();
-  const out = new Uint8Array(len);
+  const chunks = [];
   let got = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    out.set(value, got); got += value.length;
-    postMessage({ type: 'progress', got, total: len });
+    chunks.push(value); got += value.length;
+    postMessage({ type: 'progress', got: Math.min(got, total), total });
   }
-  return out.buffer.slice(0, got);
+  const out = new Uint8Array(got);
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.length; }
+  if (got !== total) throw new Error(`model download incomplete: ${got} of ${total} bytes`);
+  return out.buffer;
 }
 
 async function load() {
