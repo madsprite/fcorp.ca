@@ -1,9 +1,9 @@
 /* F Corp chat bubble. The associate (Pebble-10M) loads only when the bubble is first opened and
    runs in a Web Worker on the visitor's device. It can hold a short conversation; it transfers the
    customer when it decides to, when asked for something it is not allowed to do, or at the reply limit.
-   On devices with WebGPU, the visitor may also connect a senior associate (Qwen2.5-0.5B-Instruct via
-   WebLLM, about 276 MB, downloaded once). Pebble keeps answering until it is ready, and takes over
-   again if it fails. */
+   On devices with WebGPU, after the second reply, the visitor may connect a senior associate
+   (Qwen2.5-0.5B-Instruct via WebLLM, about 276 MB, downloaded once). Pebble keeps answering until
+   it is ready, and takes over again if it fails. */
 (() => {
   const BASE = new URL('.', document.currentScript.src).href;
   const MAX_REPLIES = 6;
@@ -12,7 +12,7 @@
   // (keep in step with ESCALATE in senior.js)
   const ESCALATE = /\b(cancel|close (my|the) account|delete|unsubscribe|manager|supervisor|speak to a human|talk to a human|complain|lawyer|legal|worst|terrible|awful|unacceptable|useless|ridiculous|furious)\b/i;
   const MARK = '<svg viewBox="28 26 48 48" aria-hidden="true"><rect x="34" y="26" width="10" height="48"/><rect x="48" y="26" width="22" height="10"/><rect x="48" y="45" width="15" height="10"/></svg>';
-  const CLOSING = 'Your conversation has been transferred. A specialist will contact you when it is convenient. This chat is now closed.';
+  const CLOSING = 'Transferred. A specialist will be in touch when convenient.';
   const FALLBACK = ['I understand.', 'That has been noted.', 'Thank you for sharing that with us.'];
 
   const root = document.createElement('div');
@@ -28,10 +28,10 @@
       <div class="fchat-progress" hidden><i></i></div>
       <ol class="fchat-log" aria-live="polite"></ol>
       <form class="fchat-form" autocomplete="off">
-        <input class="fchat-in" maxlength="200" placeholder="Preparing your associate…" aria-label="Message" disabled>
+        <input class="fchat-in" maxlength="200" placeholder="Preparing…" aria-label="Message" disabled>
         <button class="fchat-send" type="submit" aria-label="Send" disabled>&rarr;</button>
       </form>
-      <p class="fchat-note">Your associate runs entirely on your device. Nothing you type leaves it. We don't need it to.</p>
+      <p class="fchat-note">Runs on your device. Nothing you type leaves it.</p>
     </section>`;
   document.body.appendChild(root);
 
@@ -56,27 +56,26 @@
   function greet() {
     log.innerHTML = '';
     replies = 0;
-    add('them', 'Hello. I am here for you.');
-    add('them', 'How may I help you today?');
+    add('them', 'Hello. How may I help?');
   }
   function setInput(on, placeholder) {
     input.disabled = send.disabled = !on;
     input.placeholder = placeholder;
   }
   function setStatus() {
-    status.textContent = seniorState === 'ready' ? 'Senior Associate · on your device' : 'Contentment Associate · on your device';
+    status.textContent = seniorState === 'ready' ? 'Senior associate · on device' : 'Associate · on device';
   }
   function closeConversation() {
     add('them', CLOSING, 'closing');
-    setInput(false, 'This conversation has been transferred');
+    setInput(false, 'Chat closed');
     const li = document.createElement('li');
     li.className = 'fchat-msg sys';
-    li.innerHTML = '<button type="button" class="fchat-new">Begin a new conversation</button>';
+    li.innerHTML = '<button type="button" class="fchat-new">New chat</button>';
     log.appendChild(li);
     li.querySelector('button').addEventListener('click', () => {
       worker.postMessage({ type: 'new' });
       if (senior) senior.postMessage({ type: 'new' });
-      greet(); setInput(true, 'Type a message'); input.focus();
+      greet(); setInput(true, 'Message'); input.focus();
     });
     log.scrollTop = log.scrollHeight;
   }
@@ -88,54 +87,60 @@
     pending.li.textContent = m.text || FALLBACK[Math.floor(Math.random() * FALLBACK.length)];
     pending = null; busy = false; replies++;
     if (m.transfer || replies >= MAX_REPLIES) closeConversation();
-    else { setInput(true, 'Type a message'); input.focus(); }
+    else { setInput(true, 'Message'); input.focus(); if (replies === 2) offerSenior(); }
     log.scrollTop = log.scrollHeight;
   }
 
   function startWorker() {
     worker = new Worker(BASE + 'worker.js');
     bar.hidden = false;
-    status.textContent = 'Preparing your associate';
+    status.textContent = 'Preparing…';
     worker.onmessage = (e) => {
       const m = e.data;
       if (m.type === 'progress') {
         barFill.style.width = (100 * m.got / m.total).toFixed(1) + '%';
-        status.textContent = `Preparing your associate · ${(m.got / 1048576).toFixed(1)} of ${(m.total / 1048576).toFixed(1)} MB`;
+        status.textContent = `Preparing · ${(m.got / 1048576).toFixed(1)} of ${(m.total / 1048576).toFixed(1)} MB`;
       } else if (m.type === 'ready') {
         ready = true; bar.hidden = true;
         setStatus();
-        setInput(true, 'Type a message');
+        setInput(true, 'Message');
         if (!panel.hidden) input.focus();
-        offerSenior();
+        probeSenior();
       } else if (m.type === 'reply') {
         onReply(m);
       } else if (m.type === 'error') {
         console.warn('F Corp associate:', m.message);
         bar.hidden = true; busy = false;
-        status.textContent = 'Associate unavailable';
-        add('them', 'Your associate is currently unavailable. This has been noted.', 'closing');
-        setInput(false, 'Associate unavailable');
+        status.textContent = 'Unavailable';
+        add('them', 'Unavailable. This has been noted.', 'closing');
+        setInput(false, 'Unavailable');
       }
     };
     worker.postMessage({ type: 'load' });
   }
 
   // ---------- senior associate (WebLLM, WebGPU) ----------
-  async function offerSenior() {
-    if (offered || !navigator.gpu) return;
+  // check for WebGPU quietly at load; the offer itself waits until the visitor is chatting
+  let seniorAvail = null;
+  async function probeSenior() {
+    if (!navigator.gpu) return;
+    try {
+      const adapter = await navigator.gpu.requestAdapter();
+      if (adapter) seniorAvail = { f16: adapter.features.has('shader-f16') };
+    } catch (e) { seniorAvail = null; }
+  }
+  function offerSenior() {
+    if (offered || !seniorAvail || seniorState) return;
     offered = true;
-    let adapter = null;
-    try { adapter = await navigator.gpu.requestAdapter(); } catch (e) { adapter = null; }
-    if (!adapter) return;
-    const f16 = adapter.features.has('shader-f16');
     seniorState = 'offered';
     const li = document.createElement('li');
     li.className = 'fchat-msg sys offer';
     const p = document.createElement('p');
-    p.textContent = `A senior associate is available on this device. It downloads about ${SENIOR_MB} MB once from Hugging Face and is kept in your browser's cache. Your messages still never leave your device.`;
+    p.textContent = `Senior associate available · ${SENIOR_MB} MB, one-time download.`;
+    p.title = 'Qwen2.5-0.5B via WebLLM, fetched from Hugging Face and kept in your browser cache. Your messages stay on your device.';
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'fchat-new'; b.textContent = 'Connect a senior associate';
-    b.addEventListener('click', () => { li.remove(); connectSenior(f16); });
+    b.type = 'button'; b.className = 'fchat-new'; b.textContent = 'Connect';
+    b.addEventListener('click', () => { li.remove(); connectSenior(seniorAvail.f16); });
     li.append(p, b);
     log.appendChild(li);
     log.scrollTop = log.scrollHeight;
@@ -147,12 +152,11 @@
     bar.hidden = true;
     if (senior) { senior.terminate(); senior = null; }
     setStatus();
-    note('The senior associate is unavailable on this device. Your associate will continue.');
+    note('Senior associate unavailable.');
   }
 
   function connectSenior(f16) {
     seniorState = 'loading';
-    note('Connecting a senior associate. Your current associate will continue in the meantime.');
     try {
       senior = new Worker(BASE + 'senior-worker.js', { type: 'module' });
     } catch (e) { seniorFailed(e && e.message || e); return; }
@@ -162,11 +166,11 @@
       const m = e.data;
       if (m.type === 'progress') {
         barFill.style.width = (100 * m.progress).toFixed(1) + '%';
-        status.textContent = `Connecting a senior associate · ${Math.round(100 * m.progress)}%`;
+        status.textContent = `Senior associate · ${Math.round(100 * m.progress)}%`;
       } else if (m.type === 'ready') {
         seniorState = 'ready'; bar.hidden = true;
         setStatus();
-        note('A senior associate has joined the conversation.');
+        note('Senior associate joined.');
       } else if (m.type === 'reply') {
         onReply(m);
       } else if (m.type === 'error') {
@@ -203,7 +207,7 @@
     input.value = '';
     add('me', text);
     busy = true;
-    setInput(false, 'Your associate is responding');
+    setInput(false, 'Responding…');
     const forceTransfer = replies >= MAX_REPLIES - 1 || ESCALATE.test(text);
     pending = { id: ++seq, li: add('them', '', 'typing'), text, forceTransfer };
     const target = seniorState === 'ready' ? senior : worker;

@@ -7,7 +7,7 @@
   bar.setAttribute('aria-label', 'Cookie notice');
   bar.innerHTML = `
     <p><b>F Corp does not use cookies.</b> We don't need to.
-    <small>This notice returns on every visit, because no record of your choice is kept.</small></p>
+    <small>Nothing is stored, so this returns each visit.</small></p>
     <button type="button" class="btn">I understand</button>`;
   bar.hidden = true;
   document.body.appendChild(bar);
