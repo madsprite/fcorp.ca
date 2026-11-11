@@ -173,6 +173,9 @@ footer a:hover { color: var(--teal); }
 .fchat-msg.me { align-self: flex-end; background: var(--teal); color: var(--white); border-bottom-right-radius: 4px; }
 .fchat-msg.closing { background: var(--mint); }
 .fchat-msg.sys { align-self: center; background: none; padding: 0; }
+.fchat-msg.note { align-self: center; background: none; padding: 0 8px; font-size: 12px; color: var(--muted); text-align: center; max-width: 92%; }
+.fchat-msg.offer { align-self: stretch; max-width: none; background: var(--mint); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.fchat-msg.offer p { margin: 0; font-size: 13px; line-height: 1.5; }
 .fchat-new { border: 0; background: none; color: var(--teal); font: inherit; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--line); padding: 2px 0; }
 .fchat-msg.typing::after { content: "\2022\2022\2022"; letter-spacing: .2em; color: var(--muted); animation: blink 1.2s infinite; }
 @keyframes blink { 50% { opacity: .3; } }

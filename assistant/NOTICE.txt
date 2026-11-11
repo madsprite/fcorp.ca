@@ -20,6 +20,16 @@ Changes made for this site:
 
 tokenizer.json is copied unchanged from the model repository.
 
+Senior associate (optional, WebGPU only, loaded when the visitor chooses to connect it):
+- Runs Qwen2.5-0.5B-Instruct (https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct, Apache License 2.0)
+  in the MLC build served by https://huggingface.co/mlc-ai, through WebLLM 0.2.86
+  (https://github.com/mlc-ai/web-llm, Apache License 2.0) loaded from cdn.jsdelivr.net.
+  This site does not host or modify those model files; the visitor's browser fetches and caches them.
+- senior.js holds the persona prompt and fixed replies: identity questions, attempts to change
+  its role, replies containing figures, and out-of-character replies get set wording instead of
+  model output. Replies are checked against blocked.json, a list of FNV-1a hashes of offensive
+  words built from the same blocklists as words.txt, so the words themselves are not published.
+
 words.txt is a subset of the ENABLE word list (public domain), keeping common words by
 tokenizer length, with offensive terms removed at build time using the LDNOOBW list
 (CC-BY-4.0, https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words),
