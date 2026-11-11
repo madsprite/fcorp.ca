@@ -1,6 +1,6 @@
 /*
- * Pebble-10M-Chat, token-by-token inference in plain JavaScript.
- * Model: basically-ai/Pebble-10M-Chat (Apache-2.0). Hybrid Mamba2 + attention,
+ * Pebble-10M, token-by-token inference in plain JavaScript.
+ * Model: basically-ai/Pebble-10M (Apache-2.0). Hybrid Mamba2 + attention,
  * 8 blocks (m m m a m m m a), d_model 384, vocab 2048, context 512.
  *
  * Runs in a Web Worker (importScripts) and in Node (require) with the same code.
@@ -177,6 +177,26 @@
       for (let i = 0; i < D; i++) x[i] += this.t[i];
     }
 
+    // copy of the recurrent state, so a fixed prompt prefix is only processed once
+    snapshot() {
+      return {
+        pos: this.pos,
+        state: this.state.map(s => s.conv
+          ? { conv: s.conv.slice(), ssm: s.ssm.slice() }
+          : { k: s.k.slice(0, this.pos * D), v: s.v.slice(0, this.pos * D) }),
+        logits: this.logits.slice(),
+      };
+    }
+    restore(snap) {
+      this.pos = snap.pos;
+      snap.state.forEach((s, i) => {
+        const t = this.state[i];
+        if (s.conv) { t.conv.set(s.conv); t.ssm.set(s.ssm); }
+        else { t.k.set(s.k); t.v.set(s.v); }
+      });
+      this.logits.set(snap.logits);
+    }
+
     // feed one token, return logits for the next one
     step(tok) {
       if (this.pos >= CTX) throw new Error('context full');
@@ -317,70 +337,71 @@
     }
     complete(w, extra) { return this.words.has(w) || !!(extra && extra.words.has(w)); }
   }
-  function extraWords(text) {
-    const e = { words: new Set(), prefixes: new Set() };
-    for (const m of text.toLowerCase().matchAll(/[\p{L}']+/gu)) {
-      const w = m[0]; e.words.add(w);
-      for (let i = 1; i <= w.length; i++) e.prefixes.add(w.slice(0, i));
-    }
-    return e;
-  }
 
-  // ---------- one short reply ----------
-  // The published weights were trained with labels shifted twice: the logits at
-  // position i predict token i+2, not i+1 (measured: 4.06 vs 5.93 nats/token).
-  // So the token after position n is sampled from the logits computed at n-1.
-  // Every reply starts from a fresh state and sees only the latest message.
-  function reply(model, tok, userText, opt, onText, lex) {
-    const o = Object.assign({ maxTokens: 28, maxPromptTokens: 48, minWords: 4, temperature: 0.45, topK: 40, topP: 0.9, repetitionPenalty: 1.3 }, opt);
-    model.reset();
+  // ---------- one short reply, base model ----------
+  // Pebble-10M (base) predicts the next token normally. It is not chat-tuned, so it is
+  // steered with a short example transcript. That prefix is run once and snapshotted;
+  // each reply restores the snapshot and only processes the visitor's latest message.
+  const PREFIX =
+    'The following is a support chat between a customer and a calm, friendly associate at F Corp, a large company.\n\n' +
+    'Customer: Hello, is anyone there?\n' +
+    'Associate: Hello. I am here for you. How can I help you today?\n' +
+    'Customer: I would like to close my account.\n' +
+    'Associate: I understand. We value our relationship with you, and we would be sorry to see you go.\n' +
+    'Customer: Why was I charged twice this month?\n' +
+    'Associate: Thank you for letting us know. Your payment has been noted and will be reviewed.\n' +
+    'Customer: ';
+  function replyBase(model, tok, userText, opt, onText, lex) {
+    const o = Object.assign({ maxTokens: 32, maxPromptTokens: 48, minWords: 4, temperature: 0.6, topK: 40, topP: 0.9, repetitionPenalty: 1.2 }, opt);
+    if (!model._prefix) {
+      model.reset();
+      for (const t of [0, ...tok.encode(PREFIX)]) model.step(t);
+      model._prefix = model.snapshot();
+    }
+    model.restore(model._prefix);
     const clean = userText.replace(/\s+/g, ' ').trim();
     let msg = tok.encode(clean);
     if (msg.length > o.maxPromptTokens) msg = msg.slice(-o.maxPromptTokens);
-    const ids = [0, ...tok.encode('user: '), ...msg, ...tok.encode('\nassistant:')];
-    let prev = null, cur = null;
-    for (const t of ids) { prev = cur; cur = Float32Array.from(model.step(t)); }
-    const extra = null; // the visitor's own words are never added to the vocabulary
+    let logits = null;
+    for (const t of [...msg, ...tok.encode('\nAssociate:')]) logits = Float32Array.from(model.step(t));
     const out = [];
-    let text = '', state = { w: '', last: ' ' }, ended = false;
+    let text = '', state = { w: '', last: '' }, ended = false;
     for (let i = 0; i < o.maxTokens; i++) {
-      let logits = prev, nextState = null;
+      let masked = logits, nextState = null;
       if (lex) {
-        logits = Float32Array.from(prev);
+        masked = Float32Array.from(logits);
         let any = false;
-        for (let id = 0; id < logits.length; id++) {
+        for (let id = 0; id < masked.length; id++) {
           const s = lex.text[id];
-          const ok = id === 0 ? (!state.w || lex.complete(state.w, extra))
-                   : s !== null && lex.advance(state, s, extra) !== null;
-          if (!ok) logits[id] = -Infinity; else any = true;
+          const ok = id === 0 ? (!state.w || lex.complete(state.w))
+                   : (s === '\n' && (!state.w || lex.complete(state.w))) || (s !== null && lex.advance(state, s) !== null);
+          if (!ok) masked[id] = -Infinity; else any = true;
         }
         if (!any) break;
       }
-      const t = sample(logits, out.slice(-24), o);
+      const t = sample(masked, out.slice(-24), o);
       if (t === 0) { ended = true; break; }
-      if (lex) nextState = lex.advance(state, lex.text[t], extra);
       out.push(t);
       const next = tok.decode(out);
-      const cut = next.search(/\n|user:|assistant:/);
-      if (cut >= 0) { if (next.slice(0, cut).trim()) { text = next.slice(0, cut); ended = true; break; } }
-      else {
-        text = next; if (nextState) state = nextState; if (onText) onText(text.trim());
-        // one sentence is enough: stop at its end once it has a few words
-        if (/[.!?]\s*$/.test(text) && text.trim().split(/\s+/).length >= o.minWords) { ended = true; break; }
-      }
-      prev = cur; cur = Float32Array.from(model.step(t));
+      const cut = next.search(/\n|Customer:|Associate:/);
+      if (cut >= 0) { if (next.slice(0, cut).trim()) { text = next.slice(0, cut); } ended = true; break; }
+      if (lex) nextState = lex.advance(state, lex.text[t]);
+      text = next; if (nextState) state = nextState; if (onText) onText(text.trim());
+      if (/[.!?]\s*$/.test(text) && text.trim().split(/\s+/).length >= o.minWords) { ended = true; break; }
+      if (model.pos >= CTX) break;
+      logits = Float32Array.from(model.step(t));
     }
-    // ran out of room mid-word: drop the unfinished word
-    if (lex && !ended && state.w && !lex.complete(state.w, extra)) text = text.slice(0, text.length - state.w.length);
+    if (lex && !ended && state.w && !lex.complete(state.w)) text = text.slice(0, text.length - state.w.length);
     text = text.trim().replace(/[,\s]+$/, '');
-    if (lex && text) {
+    if (!/\p{L}/u.test(text)) text = '';
+    if (text) {
       if (!/[.!?]$/.test(text)) text += '.';
       text = text.replace(/\bi\b/g, 'I').replace(/^\p{Ll}/u, c => c.toUpperCase());
     }
     return text;
   }
 
-  const api = { Pebble, Tokenizer, Lexicon, loadWeights, sample, reply, CTX, EOS: 0 };
+  const api = { Pebble, Tokenizer, Lexicon, loadWeights, sample, replyBase, CTX, EOS: 0 };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.PebbleLM = api;
 })(typeof self !== 'undefined' ? self : this);

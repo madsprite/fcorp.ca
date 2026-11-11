@@ -1,4 +1,4 @@
-/* F Corp associate: runs Pebble-10M-Chat entirely inside this worker, on the visitor's device. */
+/* F Corp associate: runs Pebble-10M entirely inside this worker, on the visitor's device. */
 importScripts('pebble.js');
 
 let model = null, tok = null, lex = null;
@@ -27,14 +27,15 @@ async function fetchWithProgress(url, total) {
 }
 
 async function load() {
-  const manifest = await (await fetch(here('pebble-10m.json'))).json();
+  const manifest = await (await fetch(here('pebble-10m-base.json'))).json();
   const tj = await (await fetch(here('tokenizer.json'))).json();
   const words = (await (await fetch(here('words.txt'))).text()).split('\n').filter(Boolean);
-  const buf = await fetchWithProgress(here('pebble-10m-f16.bin'), manifest.bytes);
+  const buf = await fetchWithProgress(here('pebble-10m-base-f16.bin'), manifest.bytes);
   const W = PebbleLM.loadWeights(manifest, buf);
   model = new PebbleLM.Pebble(W);
   tok = new PebbleLM.Tokenizer(tj);
   lex = new PebbleLM.Lexicon(words, tok);
+  PebbleLM.replyBase(model, tok, 'Hello', { maxTokens: 1 }, null, lex); // runs the example transcript once
   postMessage({ type: 'ready' });
 }
 
@@ -43,7 +44,7 @@ onmessage = async (e) => {
   try {
     if (m.type === 'load') { if (!model) await load(); else postMessage({ type: 'ready' }); }
     if (m.type === 'reply') {
-      const text = PebbleLM.reply(model, tok, m.text, null, partial => postMessage({ type: 'partial', id: m.id, text: partial }), lex);
+      const text = PebbleLM.replyBase(model, tok, m.text, null, partial => postMessage({ type: 'partial', id: m.id, text: partial }), lex);
       postMessage({ type: 'reply', id: m.id, text });
     }
   } catch (err) {
