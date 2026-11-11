@@ -190,6 +190,14 @@ footer a:hover { color: var(--teal); }
   .fchat-panel, .fchat-msg.typing::after { animation: none; }
 }
 
+/* ---------- message from The Founders ---------- */
+.founders { background: var(--white); }
+.letter-card { max-width: 620px; margin: 0 auto; }
+.letter-card p { font-family: var(--head); font-weight: 300; font-size: clamp(19px, 2.2vw, 22px); line-height: 1.55; margin: 0 0 20px; }
+.letter-card .quarter { font-family: var(--sans); font-size: 11px; letter-spacing: .32em; text-transform: uppercase; color: var(--teal); margin-bottom: 32px; }
+.letter-card .sig { font-family: var(--sans); font-size: 13px; letter-spacing: .32em; text-transform: uppercase; color: var(--teal); margin: 36px 0 8px; }
+.letter-card .next { font-family: var(--sans); font-size: 12px; color: var(--muted); margin: 0; }
+
 /* ---------- newsroom ---------- */
 .releases { list-style: none; margin: 0; padding: 0; max-width: 760px; }
 .release { padding: 40px 0; border-top: 1px solid var(--line); }
