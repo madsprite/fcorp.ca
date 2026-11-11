@@ -338,70 +338,170 @@
     complete(w, extra) { return this.words.has(w) || !!(extra && extra.words.has(w)); }
   }
 
-  // ---------- one short reply, base model ----------
-  // Pebble-10M (base) predicts the next token normally. It is not chat-tuned, so it is
-  // steered with a short example transcript. That prefix is run once and snapshotted;
-  // each reply restores the snapshot and only processes the visitor's latest message.
-  const PREFIX =
-    'The following is a support chat between a customer and a calm, friendly associate at F Corp, a large company.\n\n' +
-    'Customer: Hello, is anyone there?\n' +
+  // ---------- chat session, base model ----------
+  // Pebble-10M (base) predicts the next token normally but is not chat-tuned, so it is
+  // steered with a role-play header and one example chat. The live chat follows it.
+  // History is kept as the exact tokens the model has already processed, so a new turn
+  // only feeds the new message; when the 512-token context fills, the window slides and
+  // the recent turns are replayed once from a snapshot taken after the header.
+  const PERSONA =
+    'F Corp Customer Care. Live chat.\n' +
+    'The associate is calm, warm and brief, keeps the customer on the subject of their account, ' +
+    'and transfers them to a specialist when it cannot help.\n\n' +
+    'Customer: Hello? Is anyone there?\n' +
     'Associate: Hello. I am here for you. How can I help you today?\n' +
-    'Customer: I would like to close my account.\n' +
-    'Associate: I understand. We value our relationship with you, and we would be sorry to see you go.\n' +
-    'Customer: Why was I charged twice this month?\n' +
-    'Associate: Thank you for letting us know. Your payment has been noted and will be reviewed.\n' +
-    'Customer: ';
-  function replyBase(model, tok, userText, opt, onText, lex) {
-    const o = Object.assign({ maxTokens: 32, maxPromptTokens: 48, minWords: 4, temperature: 0.6, topK: 40, topP: 0.9, repetitionPenalty: 1.2 }, opt);
-    if (!model._prefix) {
+    'Customer: My bill is higher than last month.\n' +
+    'Associate: I understand. Let me take a look at your account for you.\n' +
+    'Customer: What is your favourite movie?\n' +
+    'Associate: I am here to help with your account. Is there anything else about your bill?\n' +
+    'Customer: I want to cancel everything.\n' +
+    'Associate: Of course. I will transfer you to a specialist who can help with that.\n\n' +
+    'Customer: Hi.\n' +
+    'Associate: Welcome to F Corp. What brings you here today?\n';
+  const TRANSFER = /\b(transfer\w*|escalat\w*)\b/i;
+  const TRANSFER_LINES = [
+    'I will transfer you to a specialist who can help you with that.',
+    'Thank you for your patience. I will transfer you to a specialist now.',
+    'I understand. Let me transfer you to a colleague who can take this further.',
+  ];
+
+  class ChatSession {
+    constructor(model, tok, lex, opt) {
+      this.model = model; this.tok = tok; this.lex = lex;
+      this.o = Object.assign({ maxTokens: 24, maxUserTokens: 60, minWords: 4, candidates: 3, temperature: 0.45, topK: 40, topP: 0.9, repetitionPenalty: 1.2 }, opt);
+      this.nl = tok.encode('\n');
+      this.assoc = tok.encode('Associate:');
       model.reset();
-      for (const t of [0, ...tok.encode(PREFIX)]) model.step(t);
-      model._prefix = model.snapshot();
+      this.head = [0, ...tok.encode(PERSONA)];
+      for (const t of this.head) model.step(t);
+      this.base = model.snapshot();
+      this.reset();
     }
-    model.restore(model._prefix);
-    const clean = userText.replace(/\s+/g, ' ').trim();
-    let msg = tok.encode(clean);
-    if (msg.length > o.maxPromptTokens) msg = msg.slice(-o.maxPromptTokens);
-    let logits = null;
-    for (const t of [...msg, ...tok.encode('\nAssociate:')]) logits = Float32Array.from(model.step(t));
-    const out = [];
-    let text = '', state = { w: '', last: '' }, ended = false;
-    for (let i = 0; i < o.maxTokens; i++) {
-      let masked = logits, nextState = null;
-      if (lex) {
-        masked = Float32Array.from(logits);
-        let any = false;
-        for (let id = 0; id < masked.length; id++) {
-          const s = lex.text[id];
-          const ok = id === 0 ? (!state.w || lex.complete(state.w))
-                   : (s === '\n' && (!state.w || lex.complete(state.w))) || (s !== null && lex.advance(state, s) !== null);
-          if (!ok) masked[id] = -Infinity; else any = true;
-        }
-        if (!any) break;
+    reset() { this.lines = []; this.said = []; this.heard = []; this.fed = this.head.slice(); this.model.restore(this.base); }
+
+    // make the model's state equal to `tokens`, feeding only what is new
+    sync(tokens) {
+      let common = 0;
+      while (common < this.fed.length && common < tokens.length && this.fed[common] === tokens[common]) common++;
+      if (common < this.fed.length) { this.model.restore(this.base); this.fed = this.head.slice(); common = this.head.length; }
+      let logits = null;
+      for (let i = common; i < tokens.length; i++) { logits = this.model.step(tokens[i]); this.fed.push(tokens[i]); }
+      return Float32Array.from(logits || this.model.logits);
+    }
+
+    // one sampling pass from the current state; seed = tokens the reply must start with
+    generate(logits, seed, penalize, temperature, onText) {
+      const { tok, lex, o } = this;
+      const gen = [];
+      let text = '', state = { w: '', last: '' }, ended = false, logp = 0, steps = 0;
+      for (const t of seed) {
+        gen.push(t); this.fed.push(t);
+        logits = Float32Array.from(this.model.step(t));
+        if (lex) state = lex.advance(state, lex.text[t]) || state;
       }
-      const t = sample(masked, out.slice(-24), o);
-      if (t === 0) { ended = true; break; }
-      out.push(t);
-      const next = tok.decode(out);
-      const cut = next.search(/\n|Customer:|Associate:/);
-      if (cut >= 0) { if (next.slice(0, cut).trim()) { text = next.slice(0, cut); } ended = true; break; }
-      if (lex) nextState = lex.advance(state, lex.text[t]);
-      text = next; if (nextState) state = nextState; if (onText) onText(text.trim());
-      if (/[.!?]\s*$/.test(text) && text.trim().split(/\s+/).length >= o.minWords) { ended = true; break; }
-      if (model.pos >= CTX) break;
-      logits = Float32Array.from(model.step(t));
+      if (seed.length) text = tok.decode(gen);
+      for (let i = 0; i < o.maxTokens && this.model.pos < CTX - 2; i++) {
+        let masked = logits;
+        if (lex) {
+          masked = Float32Array.from(logits);
+          let any = false;
+          for (let id = 0; id < masked.length; id++) {
+            const s = lex.text[id];
+            const ok = id === 0 ? (!state.w || lex.complete(state.w)) : (s !== null && lex.advance(state, s) !== null);
+            if (!ok) masked[id] = -Infinity; else any = true;
+          }
+          if (!any) break;
+        }
+        const t = sample(masked, [...penalize, ...gen.slice(-24)], Object.assign({}, o, { temperature }));
+        if (t === 0) { ended = true; break; }
+        const next = tok.decode([...gen, t]);
+        if (/\n|Customer:|Associate:/.test(next)) { ended = true; break; }
+        // how confident the model was in this token (log-probability, among allowed tokens)
+        let mx = -Infinity; for (let id = 0; id < masked.length; id++) if (masked[id] > mx) mx = masked[id];
+        let z = 0; for (let id = 0; id < masked.length; id++) if (masked[id] > -Infinity) z += Math.exp(masked[id] - mx);
+        logp += masked[t] - mx - Math.log(z); steps++;
+        gen.push(t); this.fed.push(t);
+        logits = Float32Array.from(this.model.step(t));
+        if (lex) state = lex.advance(state, lex.text[t]) || state;
+        text = next; if (onText) onText(text.trim());
+        if (/[.!?]\s*$/.test(text) && text.trim().split(/\s+/).length >= o.minWords) { ended = true; break; }
+      }
+      if (lex && !ended && state.w && !lex.complete(state.w)) text = text.slice(0, text.length - state.w.length);
+      text = text.trim().replace(/[,\s]+$/, '');
+      if (!/\p{L}/u.test(text)) text = '';
+      if (text) {
+        if (!/[.!?]$/.test(text)) text += '.';
+        text = text.replace(/\bi\b/g, 'I').replace(/^\p{Ll}/u, c => c.toUpperCase());
+      }
+      return { text, gen, fluency: steps ? logp / steps : -Infinity };
     }
-    if (lex && !ended && state.w && !lex.complete(state.w)) text = text.slice(0, text.length - state.w.length);
-    text = text.trim().replace(/[,\s]+$/, '');
-    if (!/\p{L}/u.test(text)) text = '';
-    if (text) {
-      if (!/[.!?]$/.test(text)) text += '.';
-      text = text.replace(/\bi\b/g, 'I').replace(/^\p{Ll}/u, c => c.toUpperCase());
+
+    reply(userText, onText, opt) {
+      const { tok, o } = this;
+      const force = !!(opt && opt.forceTransfer);
+      let user = tok.encode('Customer: ' + userText.replace(/\s+/g, ' ').trim());
+      if (user.length > o.maxUserTokens) user = user.slice(0, o.maxUserTokens);
+      const userLine = [...user, ...this.nl];
+      // sliding window: keep the most recent lines that fit; when it must slide, keep
+      // only about half the room so the next few turns can append without a replay
+      const room = CTX - this.head.length - userLine.length - this.assoc.length - o.maxTokens - 8 - this.nl.length - 4;
+      const size = ls => ls.reduce((n, l) => n + l.tokens.length, 0);
+      if (size(this.lines) > room) {
+        while (this.lines.length && size(this.lines) > room / 2) this.lines.shift();
+      }
+      const tokens = [...this.head, ...this.lines.flatMap(l => l.tokens), ...userLine, ...this.assoc];
+      const logits = this.sync(tokens);
+      const snap = this.model.snapshot(), fedLen = this.fed.length;
+      const rewind = () => { this.model.restore(snap); this.fed.length = fedLen; };
+
+      const said = this.lines.filter(l => l.said);
+      const penalize = said.slice(-3).flatMap(l => l.gen);
+      const norm = t => t.toLowerCase().replace(/[^\p{L}' ]/gu, '').trim();
+      // anything already said in this chat, by either side, counts as a repeat
+      const seen = new Set([norm(userText), ...this.said.map(norm), ...this.heard.map(norm)]);
+      // near-repeats too: most of its words already used in one earlier reply
+      const words = t => new Set(norm(t).split(/\s+/).filter(w => w.length > 2));
+      const overlap = (a, b) => { const A = words(a), B = words(b); if (!A.size) return 0; let n = 0; for (const w of A) if (B.has(w)) n++; return n / A.size; };
+      const repeats = t => !t || seen.has(norm(t)) || [...this.said, ...this.heard, userText].some(p => overlap(t, p) >= 0.6);
+      // an unprompted transfer on the very first reply would end the chat before it starts
+      const tooSoon = t => said.length === 0 && TRANSFER.test(t);
+      // score: the model's own confidence, nudged toward addressing the customer
+      // and away from speaking as the customer
+      const score = c => c.fluency
+        + (/\byou(r|rs)?\b/i.test(c.text) ? 0.35 : 0)
+        - (/\b(my (bill|bills|account|password|plan|data|money|job)|I cannot|I can't|I need|I tried|I think I)\b/i.test(c.text) ? 1 : 0);
+
+      let r = null;
+      if (!force) {
+        // a few candidate replies from the same point; keep the best one that is not a repeat
+        const cands = [];
+        for (let k = 0; k < o.candidates; k++) {
+          rewind();
+          const c = this.generate(logits, [], k ? penalize : [], o.temperature + 0.1 * k, null);
+          if (!repeats(c.text) && !tooSoon(c.text)) cands.push(c);
+        }
+        cands.sort((a, b) => score(b) - score(a));
+        r = cands[0] || null;
+        if (!r && said.length === 0) r = { gen: tok.encode(' I am here for you. How can I help you today?'), text: 'I am here for you. How can I help you today?' };
+      }
+      // the out: when told to, or when every candidate was a repeat, the customer is
+      // transferred, in one of a few fixed wordings, because this line must always land
+      if (!r) {
+        const line = TRANSFER_LINES[Math.floor((o.rand || Math.random)() * TRANSFER_LINES.length)];
+        r = { text: line, gen: tok.encode(' ' + line) };
+      }
+      // replay the chosen reply so the model's state matches what was said
+      rewind();
+      for (const t of r.gen) { this.model.step(t); this.fed.push(t); }
+      if (onText) onText(r.text);
+      this.said.push(r.text); this.heard.push(userText);
+      this.lines.push({ tokens: userLine });
+      this.lines.push({ tokens: [...this.assoc, ...r.gen, ...this.nl], gen: r.gen, said: r.text });
+      return { text: r.text, transfer: TRANSFER.test(r.text) };
     }
-    return text;
   }
 
-  const api = { Pebble, Tokenizer, Lexicon, loadWeights, sample, replyBase, CTX, EOS: 0 };
+  const api = { Pebble, Tokenizer, Lexicon, ChatSession, loadWeights, sample, CTX, EOS: 0 };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.PebbleLM = api;
 })(typeof self !== 'undefined' ? self : this);

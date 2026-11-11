@@ -10,8 +10,11 @@ Changes made for this site:
   float32. The tied output head (lm_head, identical to the token embeddings) is omitted.
 - Inference is a new JavaScript port (pebble.js) that runs token by token in a Web Worker,
   instead of the original PyTorch / mamba-ssm code.
-- Pebble-10M is a base model, not chat-tuned. It is steered with a short example support
-  transcript, processed once and reused for every reply.
+- Pebble-10M is a base model, not chat-tuned. It is steered with a short role-play header and
+  example support chat, processed once and snapshotted. The live chat follows it with a
+  sliding window of recent turns that fits the 512-token context. Each reply is chosen from a
+  few sampled candidates, ranked by the model's own confidence, with repeats discarded.
+  Transfers use fixed wording.
 - Replies are dictionary-guided: a token is only sampled if every word it builds is on the
   way to a word in words.txt, with simple punctuation rules. The model still ranks all tokens.
 

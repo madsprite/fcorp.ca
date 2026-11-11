@@ -1,10 +1,13 @@
-/* F Corp chat bubble. The associate (Pebble-10M-Chat) loads only when the bubble is first opened,
-   runs in a Web Worker on the visitor's device, and handles at most two replies per conversation. */
+/* F Corp chat bubble. The associate (Pebble-10M) loads only when the bubble is first opened and
+   runs in a Web Worker on the visitor's device. It can hold a short conversation; it transfers the
+   customer when it decides to, when asked for something it is not allowed to do, or at the reply limit. */
 (() => {
   const BASE = new URL('.', document.currentScript.src).href;
-  const MAX_REPLIES = 2;
+  const MAX_REPLIES = 6;
+  // requests an associate never handles itself: transfer straight away
+  const ESCALATE = /\b(cancel|close (my|the) account|delete|unsubscribe|manager|supervisor|speak to a human|talk to a human|complain|lawyer|legal)\b/i;
   const MARK = '<svg viewBox="28 26 48 48" aria-hidden="true"><rect x="34" y="26" width="10" height="48"/><rect x="48" y="26" width="22" height="10"/><rect x="48" y="45" width="15" height="10"/></svg>';
-  const CLOSING = 'Thank you. Your conversation has been reassigned to a specialist, who will contact you when it is convenient.';
+  const CLOSING = 'Your conversation has been transferred. A specialist will contact you when it is convenient. This chat is now closed.';
   const FALLBACK = ['I understand.', 'That has been noted.', 'Thank you for sharing that with us.'];
 
   const root = document.createElement('div');
@@ -54,12 +57,12 @@
   }
   function closeConversation() {
     add('them', CLOSING, 'closing');
-    setInput(false, 'This conversation has been reassigned');
+    setInput(false, 'This conversation has been transferred');
     const li = document.createElement('li');
     li.className = 'fchat-msg sys';
     li.innerHTML = '<button type="button" class="fchat-new">Begin a new conversation</button>';
     log.appendChild(li);
-    li.querySelector('button').addEventListener('click', () => { greet(); setInput(true, 'Type a message'); input.focus(); });
+    li.querySelector('button').addEventListener('click', () => { worker.postMessage({ type: 'new' }); greet(); setInput(true, 'Type a message'); input.focus(); });
     log.scrollTop = log.scrollHeight;
   }
 
@@ -83,7 +86,7 @@
         if (m.type === 'reply') {
           if (!m.text) pending.li.textContent = FALLBACK[Math.floor(Math.random() * FALLBACK.length)];
           pending = null; busy = false; replies++;
-          if (replies >= MAX_REPLIES) closeConversation();
+          if (m.transfer || replies >= MAX_REPLIES) closeConversation();
           else { setInput(true, 'Type a message'); input.focus(); }
         }
         log.scrollTop = log.scrollHeight;
@@ -124,6 +127,7 @@
     busy = true;
     setInput(false, 'Your associate is responding');
     pending = { id: ++seq, li: add('them', '', 'typing') };
-    worker.postMessage({ type: 'reply', id: pending.id, text });
+    const forceTransfer = replies >= MAX_REPLIES - 1 || ESCALATE.test(text);
+    worker.postMessage({ type: 'reply', id: pending.id, text, forceTransfer });
   });
 })();
