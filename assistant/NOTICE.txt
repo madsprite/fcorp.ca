@@ -1,0 +1,16 @@
+F Corp associate: model notice
+
+The chat associate on this site runs the Pebble-10M-Chat language model
+(https://huggingface.co/basically-ai/Pebble-10M-Chat) by basically-ai,
+licensed under the Apache License, Version 2.0 (see LICENSE-Pebble-Apache-2.0.txt).
+
+Changes made for this site:
+- Weights converted from float32 safetensors to a float16 blob (pebble-10m-f16.bin)
+  with a JSON manifest (pebble-10m.json). Norms, biases and other small vectors stay float32.
+  The tied output head (lm_head, identical to the token embeddings) is omitted.
+- Inference is a new JavaScript port (pebble.js) that runs token by token in a Web Worker,
+  instead of the original PyTorch / mamba-ssm code.
+- Decoding samples each token from the logits of the previous position, because the
+  published weights predict two tokens ahead (measured: 4.06 nats/token at t+2 versus 5.93 at t+1).
+
+tokenizer.json is copied unchanged from the model repository.
